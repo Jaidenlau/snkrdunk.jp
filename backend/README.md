@@ -12,7 +12,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Set a strong `JWT_SECRET_KEY` in `.env` before publishing. Set `ADMIN_EMAIL` to the email address that is allowed to call `/admin/*` endpoints. `MAX_TRACKED_CARDS` controls the sync size and defaults to `500`. `SYNC_PERSIST_BATCH_SIZE` controls how often completed scrape batches are saved to the database.
+Set a strong `JWT_SECRET_KEY` in `.env` before publishing. Set `ADMIN_EMAIL` to the email address that is allowed to call `/admin/*` endpoints. `MAX_TRACKED_CARDS` controls the sync size and defaults to `2000`. `SYNC_PERSIST_BATCH_SIZE` controls how often completed scrape batches are saved to the database.
 
 ## Run
 
@@ -44,7 +44,7 @@ The sync job targets the public Pokémon trading cards page and the public front
 
 `https://snkrdunk.com/en/v1/trading-cards?brandId=pokemon&categoryId=25&order=popular`
 
-It uses `brandId=pokemon`, `categoryId=25`, `order=popular`, and pagination to store up to the **top 500** currently returned cards by default (`MAX_TRACKED_CARDS=500`). It does not use private API keys, bypass authentication, or attempt to defeat protected access. If SNKRDUNK changes its frontend payloads or blocks public extraction, sync exits cleanly and the API continues serving the last stored database state.
+It uses `brandId=pokemon`, `categoryId=25`, `order=popular`, and pagination to store up to the **top 2000** currently returned cards by default (`MAX_TRACKED_CARDS=2000`). It does not use private API keys, bypass authentication, or attempt to defeat protected access. If SNKRDUNK changes its frontend payloads or blocks public extraction, sync exits cleanly and the API continues serving the last stored database state.
 
 ### Rate-limit safety
 
@@ -122,7 +122,7 @@ curl -X POST http://localhost:8000/admin/import-cards \
       "product_url": "https://snkrdunk.com/en/trading-cards/sample",
       "image_url": "https://example.com/pikachu.png",
       "current_price": 25,
-      "currency": "USD",
+      "currency": "JPY",
       "popularity_rank": 1,
       "snkrdunk_id": "sample"
     }

@@ -10,13 +10,13 @@ from .scraper import DEFAULT_TRACKED_CARD_LIMIT, sync_top_pokemon_cards
 
 logger = logging.getLogger(__name__)
 
-# Full sync of the entire tracked catalog (default 500 cards). This is the
+# Full sync of the entire tracked catalog (default 2000 cards). This is the
 # heavy job; SNKRDUNK rate-limiting means it realistically takes 1-2 hours.
 SYNC_INTERVAL_HOURS = int(os.getenv("SYNC_INTERVAL_HOURS", "3") or 3)
 
 # Hot sync of the most-popular subset. The client wants near-realtime updates,
 # so we refresh the top N cards on a much faster cadence. Tuned to stay under
-# SNKRDUNK's public rate-limits: ~2 requests per card × 100 cards ≈ 4-5 minutes.
+# SNKRDUNK's public rate-limits: ~2 requests per card × 100 cards, plus delay/jitter.
 HOT_SYNC_TOP_N = int(os.getenv("HOT_SYNC_TOP_N", "100") or 100)
 HOT_SYNC_INTERVAL_MINUTES = int(os.getenv("HOT_SYNC_INTERVAL_MINUTES", "15") or 15)
 
@@ -49,7 +49,7 @@ def hot_sync() -> None:
 
     Most user activity hits the top of the popularity list, so updating those
     every ~15 minutes is the closest we can get to "near-realtime" without
-    triggering SNKRDUNK's IP blocks (a full 500-card sync still takes time).
+    triggering SNKRDUNK's IP blocks (a full 2000-card sync still takes time).
     """
     if HOT_SYNC_TOP_N <= 0:
         return

@@ -34,7 +34,7 @@ CONDITION_PRICES_URL_TEMPLATE = f"{BASE_URL}/en/v1/trading-cards/{{card_id}}/min
 USED_LISTINGS_URL_TEMPLATE = f"{BASE_URL}/en/v1/products/{{product_code}}/used-listings"
 SALE_PRICES_URL_TEMPLATE = f"{BASE_URL}/en/v1/products/{{product_code}}/sale-prices"
 TRADING_CARD_PRODUCT_CODE = "SW---{card_id}"
-DEFAULT_TRACKED_CARD_LIMIT = int(os.getenv("MAX_TRACKED_CARDS", "500") or 500)
+DEFAULT_TRACKED_CARD_LIMIT = int(os.getenv("MAX_TRACKED_CARDS", "2000") or 2000)
 DEFAULT_SYNC_FETCH_WORKERS = int(os.getenv("SYNC_FETCH_WORKERS", "2") or 2)
 DEFAULT_SYNC_PERSIST_BATCH_SIZE = int(os.getenv("SYNC_PERSIST_BATCH_SIZE", "25") or 25)
 SNKRDUNK_REQUEST_DELAY_SECONDS = float(os.getenv("SNKRDUNK_REQUEST_DELAY_SECONDS", "0.7") or 0.7)
@@ -71,6 +71,8 @@ PRICE_SOURCE_SOLD_AVG = "sold_avg"
 PRICE_SOURCE_LISTING = "listing_min"
 PRICE_CHART_POINTS_KEY = "__price_chart_points__"
 PRICE_CHART_GRADE_NAME = "PSA 10"
+PRICE_OUTLIER_HIGH_MULTIPLIER = float(os.getenv("SNKRDUNK_PRICE_OUTLIER_HIGH_MULTIPLIER", "2.5") or 2.5)
+PRICE_OUTLIER_LOW_MULTIPLIER = float(os.getenv("SNKRDUNK_PRICE_OUTLIER_LOW_MULTIPLIER", "0.35") or 0.35)
 
 HEADERS = {
     "User-Agent": (
@@ -828,6 +830,60 @@ def _is_single_card_listing(item: Dict[str, Any]) -> bool:
     return declared_quantity is None or declared_quantity <= 1
 
 
+def _median(values: List[float]) -> float:
+    ordered = sorted(values)
+    midpoint = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[midpoint]
+    return (ordered[midpoint - 1] + ordered[midpoint]) / 2
+
+
+def _filter_price_outlier_sales(
+    snkrdunk_id: str,
+    grade_name: str,
+    sales: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Drop obvious bundle/lot prices that survive the listing text filter.
+
+    Some SNKRDUNK sold rows are technically one listing but contain several PSA
+    slabs in the photos (for example 10 cards sold together). The API may not
+    expose that quantity, so the safest second signal is a single sale that is
+    several times above the recent median for the same card+grade.
+    """
+    numeric_sales = [
+        sale for sale in sales if isinstance(sale.get("price"), (int, float)) and float(sale["price"]) > 0
+    ]
+    if len(numeric_sales) < SOLD_PRICE_SAMPLE_SIZE:
+        return sales
+
+    median_price = _median([float(sale["price"]) for sale in numeric_sales])
+    if median_price <= 0:
+        return sales
+
+    low_limit = median_price * PRICE_OUTLIER_LOW_MULTIPLIER
+    high_limit = median_price * PRICE_OUTLIER_HIGH_MULTIPLIER
+    filtered: List[Dict[str, Any]] = []
+    removed = 0
+    for sale in sales:
+        price = sale.get("price")
+        if isinstance(price, (int, float)):
+            numeric_price = float(price)
+            if numeric_price < low_limit or numeric_price > high_limit:
+                removed += 1
+                logger.info(
+                    "Skipping price outlier for %s grade=%s price=%s median=%s listing_id=%s",
+                    snkrdunk_id,
+                    grade_name,
+                    numeric_price,
+                    median_price,
+                    sale.get("listing_id"),
+                )
+                continue
+        filtered.append(sale)
+
+    return filtered if filtered else sales
+
+
 def fetch_sale_prices_authenticated(
     snkrdunk_id: str,
     session: Optional[requests.Session] = None,
@@ -1064,6 +1120,11 @@ def _enrich_with_sold_avg(
 
     if not sales_by_grade:
         return {}
+
+    for grade_name, sales in list(sales_by_grade.items()):
+        if grade_name == PRICE_CHART_POINTS_KEY:
+            continue
+        sales_by_grade[grade_name] = _filter_price_outlier_sales(snkrdunk_id, grade_name, sales)
 
     by_name = {entry.get("condition_name"): entry for entry in conditions}
     for grade_name, sales in sales_by_grade.items():
