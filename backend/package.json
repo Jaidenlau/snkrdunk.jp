@@ -1,0 +1,16 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "FastAPI backend for the Pokémon price tracker MVP.",
+  "main": "index.js",
+  "scripts": {
+    "snkrdunk:login": "node scripts/snkrdunk_login.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.60.0"
+  }
+}

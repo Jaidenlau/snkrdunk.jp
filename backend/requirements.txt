@@ -1,0 +1,13 @@
+apscheduler
+beautifulsoup4
+bcrypt<4.1
+email-validator
+fastapi
+passlib[bcrypt]
+python-dotenv
+python-jose[cryptography]
+requests
+sqlalchemy
+urllib3<2
+uvicorn[standard]
+pydantic[email]
