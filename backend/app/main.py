@@ -51,6 +51,11 @@ def _run_lightweight_migrations() -> None:
             "AND condition_name NOT IN ('A','B','C','D','PSA 10')"
         )
 
+    if "portfolio_items" in inspector.get_table_names():
+        existing_portfolio = {col["name"] for col in inspector.get_columns("portfolio_items")}
+        if "purchase_price_currency" not in existing_portfolio:
+            statements.append("ALTER TABLE portfolio_items ADD COLUMN purchase_price_currency VARCHAR NULL")
+
     if not statements and not cleanup_statements:
         return
 

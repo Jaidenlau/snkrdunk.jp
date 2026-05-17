@@ -135,5 +135,9 @@ class PortfolioItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
+    # Currency in which purchase_price is stored. NULL means legacy rows whose
+    # currency was implicitly the card's currency at the time of saving.
+    purchase_price_currency = Column(String, nullable=True)
+
     user = relationship("User", back_populates="portfolio_items")
     card = relationship("Card", back_populates="portfolio_items")

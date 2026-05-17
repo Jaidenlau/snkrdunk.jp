@@ -46,11 +46,11 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 PLAYWRIGHT_FETCH_SCRIPT = BACKEND_DIR / "scripts" / "snkrdunk_browser_fetch.mjs"
 USED_LISTINGS_PAGE_SIZE = 50
 # Hard cap on pages per card so a single card cannot stall the whole sync if it has
-# thousands of sold listings spread across rare grades. 15 pages = up to 750 listings
+# thousands of sold listings spread across rare grades. 20 pages = up to 1000 listings
 # per card. The actual sync stops earlier per card via early-exit (see
 # `fetch_sold_listings`) once every requested grade has its sample, OR when a partial
 # page signals end-of-data.
-USED_LISTINGS_MAX_PAGES = 15
+USED_LISTINGS_MAX_PAGES = 20
 
 # Per client request, only A/B/C/D/PSA 10 grades are tracked.
 ALLOWED_GRADE_NAMES = {"A", "B", "C", "D", "PSA 10"}
@@ -66,7 +66,7 @@ DEFAULT_CONDITION_NAME = "PSA 10"
 # Sold-price aggregation settings. The /sale-prices endpoint requires an
 # authenticated SNKRDUNK session (provided via SNKRDUNK_BROWSER_CURL). Without it,
 # we transparently fall back to listing prices and label the source clearly.
-SOLD_PRICE_SAMPLE_SIZE = 3
+SOLD_PRICE_SAMPLE_SIZE = 5
 PRICE_SOURCE_SOLD_AVG = "sold_avg"
 PRICE_SOURCE_LISTING = "listing_min"
 PRICE_CHART_POINTS_KEY = "__price_chart_points__"
@@ -853,7 +853,7 @@ def _filter_price_outlier_sales(
     numeric_sales = [
         sale for sale in sales if isinstance(sale.get("price"), (int, float)) and float(sale["price"]) > 0
     ]
-    if len(numeric_sales) < SOLD_PRICE_SAMPLE_SIZE:
+    if len(numeric_sales) < 2:
         return sales
 
     median_price = _median([float(sale["price"]) for sale in numeric_sales])

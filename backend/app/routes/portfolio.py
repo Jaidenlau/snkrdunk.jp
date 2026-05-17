@@ -44,6 +44,8 @@ def add_portfolio_item(
     if existing:
         existing.quantity += payload.quantity
         existing.purchase_price = payload.purchase_price
+        if payload.purchase_price_currency is not None:
+            existing.purchase_price_currency = payload.purchase_price_currency
         db.commit()
         db.refresh(existing)
         return existing
@@ -53,6 +55,7 @@ def add_portfolio_item(
         card_id=payload.card_id,
         quantity=payload.quantity,
         purchase_price=payload.purchase_price,
+        purchase_price_currency=payload.purchase_price_currency,
     )
     db.add(item)
     db.commit()
@@ -79,6 +82,8 @@ def update_portfolio_item(
         item.quantity = payload.quantity
     if payload.purchase_price is not None:
         item.purchase_price = payload.purchase_price
+    if payload.purchase_price_currency is not None:
+        item.purchase_price_currency = payload.purchase_price_currency
 
     db.commit()
     db.refresh(item)

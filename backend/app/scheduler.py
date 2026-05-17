@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 
 # Full sync of the entire tracked catalog (default 2000 cards). This is the
 # heavy job; SNKRDUNK rate-limiting means it realistically takes 1-2 hours.
-SYNC_INTERVAL_HOURS = int(os.getenv("SYNC_INTERVAL_HOURS", "3") or 3)
+SYNC_INTERVAL_HOURS = int(os.getenv("SYNC_INTERVAL_HOURS", "2") or 2)
 
 # Hot sync of the most-popular subset. The client wants near-realtime updates,
 # so we refresh the top N cards on a much faster cadence. Tuned to stay under
-# SNKRDUNK's public rate-limits: ~2 requests per card × 100 cards, plus delay/jitter.
-HOT_SYNC_TOP_N = int(os.getenv("HOT_SYNC_TOP_N", "100") or 100)
-HOT_SYNC_INTERVAL_MINUTES = int(os.getenv("HOT_SYNC_INTERVAL_MINUTES", "15") or 15)
+# SNKRDUNK's public rate-limits: ~2 requests per card × 200 cards, plus delay/jitter.
+HOT_SYNC_TOP_N = int(os.getenv("HOT_SYNC_TOP_N", "200") or 200)
+HOT_SYNC_INTERVAL_MINUTES = int(os.getenv("HOT_SYNC_INTERVAL_MINUTES", "10") or 10)
 
 # Run a full sync shortly after boot so a freshly-restarted backend doesn't
 # leave stale data on the homepage for hours. Configurable so test runs can
@@ -48,7 +48,7 @@ def hot_sync() -> None:
     """Refresh just the most-popular cards on a fast cadence.
 
     Most user activity hits the top of the popularity list, so updating those
-    every ~15 minutes is the closest we can get to "near-realtime" without
+    every ~10 minutes is the closest we can get to "near-realtime" without
     triggering SNKRDUNK's IP blocks (a full 2000-card sync still takes time).
     """
     if HOT_SYNC_TOP_N <= 0:
@@ -86,7 +86,7 @@ def start_scheduler() -> None:
     )
     scheduler.start()
     logger.info(
-        "Scheduler started. Full sync every %sh, hot sync (top %s) every %sm.",
+        "Scheduler started. Full sync every %sh, hot sync (top %s cards) every %sm.",
         SYNC_INTERVAL_HOURS,
         HOT_SYNC_TOP_N,
         HOT_SYNC_INTERVAL_MINUTES,

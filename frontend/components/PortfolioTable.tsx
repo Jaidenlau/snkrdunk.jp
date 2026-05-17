@@ -31,11 +31,11 @@ export default function PortfolioTable({
   const profitLoss = totals.currentValue - totals.totalCost;
   const profitLossPercent = totals.totalCost > 0 ? (profitLoss / totals.totalCost) * 100 : 0;
 
-  async function updateItem(item: PortfolioItem, quantity: number, purchasePrice: number) {
+  async function updateItem(item: PortfolioItem, quantity: number, purchasePrice: number, purchasePriceCurrency = "USD") {
     setSavingId(item.id);
     setError("");
     try {
-      await api.updatePortfolioItem(item.id, quantity, purchasePrice);
+      await api.updatePortfolioItem(item.id, quantity, purchasePrice, purchasePriceCurrency);
       await onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update portfolio item.");
@@ -139,23 +139,27 @@ function PortfolioCard({
   profitLossPercent: number;
   displayCurrency: DisplayCurrency;
   saving: boolean;
-  onUpdate: (item: PortfolioItem, quantity: number, purchasePrice: number) => Promise<void>;
+  onUpdate: (item: PortfolioItem, quantity: number, purchasePrice: number, purchasePriceCurrency?: string) => Promise<void>;
   onDelete: (itemId: number) => Promise<void>;
 }) {
   const [quantity, setQuantity] = useState(item.quantity);
   const cardCurrency = item.card.currency ?? "JPY";
+  // Use the stored purchase_price_currency when available (new rows always use USD).
+  // Legacy rows (null) fall back to cardCurrency for backward compatibility.
+  const storedCurrency = item.purchase_price_currency ?? cardCurrency;
   const [purchasePrice, setPurchasePrice] = useState(
-    roundMoneyInput(convertMoney(item.purchase_price, cardCurrency, displayCurrency), displayCurrency)
+    roundMoneyInput(convertMoney(item.purchase_price, storedCurrency, displayCurrency), displayCurrency)
   );
   const priceSource = item.card.condition_prices?.find((price) => price.condition_name === "PSA 10")?.price_source;
 
   useEffect(() => {
     setQuantity(item.quantity);
-    setPurchasePrice(roundMoneyInput(convertMoney(item.purchase_price, cardCurrency, displayCurrency), displayCurrency));
-  }, [cardCurrency, displayCurrency, item.purchase_price, item.quantity]);
+    setPurchasePrice(roundMoneyInput(convertMoney(item.purchase_price, storedCurrency, displayCurrency), displayCurrency));
+  }, [storedCurrency, displayCurrency, item.purchase_price, item.quantity]);
 
   const currentPrice = convertMoney(item.card.current_price, cardCurrency, displayCurrency);
-  const storedPurchasePrice = convertMoney(purchasePrice, displayCurrency, cardCurrency);
+  // Always store purchase price in USD so it stays stable even if card.currency changes between syncs.
+  const storedPurchasePrice = convertMoney(purchasePrice, displayCurrency, "USD");
 
   return (
     <article className="group relative overflow-hidden rounded-[2rem] border border-white bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/70 transition hover:-translate-y-1 hover:shadow-[0_28px_70px_rgba(15,23,42,0.14)]">
@@ -229,7 +233,7 @@ function PortfolioCard({
         </label>
         <button
           disabled={saving}
-          onClick={() => onUpdate(item, quantity, storedPurchasePrice)}
+          onClick={() => onUpdate(item, quantity, storedPurchasePrice, "USD")}
           className="rounded-full bg-slate-950 px-4 py-2.5 text-xs font-black text-white transition hover:bg-emerald-600 disabled:opacity-50"
         >
           Save

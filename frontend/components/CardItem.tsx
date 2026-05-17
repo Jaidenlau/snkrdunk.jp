@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { api, formatDate, formatMoney, isLoggedIn, pickDefaultCondition } from "@/lib/api";
+import { api, convertMoney, formatDate, formatMoney, isLoggedIn, pickDefaultCondition } from "@/lib/api";
 import type { Card } from "@/lib/types";
 
 type Props = {
@@ -20,7 +20,10 @@ export default function CardItem({ card, onMessage }: Props) {
       return;
     }
     try {
-      await api.addPortfolioItem(card.id, 1, displayPrice ?? 0);
+      // Convert market price to USD so the stored purchase_price_currency is always stable
+      // and doesn't break if card.currency changes on a future sync.
+      const priceInUsd = convertMoney(displayPrice ?? 0, displayCurrency, "USD");
+      await api.addPortfolioItem(card.id, 1, priceInUsd, "USD");
       onMessage?.(`${card.name} was added to your portfolio.`);
     } catch (error) {
       onMessage?.(error instanceof Error ? error.message : "Could not add card to portfolio.");
@@ -76,7 +79,7 @@ export default function CardItem({ card, onMessage }: Props) {
               {defaultCondition?.condition_name ?? "Lowest"}
               {" · "}
               {defaultCondition?.price_source === "sold_avg"
-                ? `avg of last ${defaultCondition.sales_count || 3} sold`
+                ? `avg of last ${defaultCondition.sales_count || 5} sold`
                 : "no recent sold · listing"}
             </span>
           </div>

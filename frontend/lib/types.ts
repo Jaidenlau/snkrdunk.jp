@@ -57,6 +57,7 @@ export type PortfolioItem = {
   card_id: number;
   quantity: number;
   purchase_price: number;
+  purchase_price_currency: string | null;
   created_at: string;
   updated_at: string;
   card: Card;

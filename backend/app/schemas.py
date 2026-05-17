@@ -106,11 +106,13 @@ class PortfolioItemCreate(BaseModel):
     card_id: int
     quantity: int = Field(default=1, ge=1)
     purchase_price: float = Field(default=0, ge=0)
+    purchase_price_currency: Optional[str] = None
 
 
 class PortfolioItemUpdate(BaseModel):
     quantity: Optional[int] = Field(default=None, ge=1)
     purchase_price: Optional[float] = Field(default=None, ge=0)
+    purchase_price_currency: Optional[str] = None
 
 
 class PortfolioItemOut(BaseModel):
@@ -118,6 +120,7 @@ class PortfolioItemOut(BaseModel):
     card_id: int
     quantity: int
     purchase_price: float
+    purchase_price_currency: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     card: CardOut

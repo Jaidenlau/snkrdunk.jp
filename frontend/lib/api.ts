@@ -185,15 +185,15 @@ export const api = {
       body: JSON.stringify({ email, password })
     }),
   getPortfolio: () => request<PortfolioItem[]>("/portfolio"),
-  addPortfolioItem: (cardId: number, quantity: number, purchasePrice: number) =>
+  addPortfolioItem: (cardId: number, quantity: number, purchasePrice: number, purchasePriceCurrency = "USD") =>
     request<PortfolioItem>("/portfolio/items", {
       method: "POST",
-      body: JSON.stringify({ card_id: cardId, quantity, purchase_price: purchasePrice })
+      body: JSON.stringify({ card_id: cardId, quantity, purchase_price: purchasePrice, purchase_price_currency: purchasePriceCurrency })
     }),
-  updatePortfolioItem: (itemId: number, quantity: number, purchasePrice: number) =>
+  updatePortfolioItem: (itemId: number, quantity: number, purchasePrice: number, purchasePriceCurrency = "USD") =>
     request<PortfolioItem>(`/portfolio/items/${itemId}`, {
       method: "PATCH",
-      body: JSON.stringify({ quantity, purchase_price: purchasePrice })
+      body: JSON.stringify({ quantity, purchase_price: purchasePrice, purchase_price_currency: purchasePriceCurrency })
     }),
   deletePortfolioItem: (itemId: number) =>
     request<void>(`/portfolio/items/${itemId}`, {
