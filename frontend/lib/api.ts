@@ -42,7 +42,7 @@ type SyncResult = {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const TOKEN_KEY = "pokemon_price_tracker_token";
 
-export type DisplayCurrency = "HKD" | "JPY" | "USD";
+export type DisplayCurrency = "HKD" | "JPY";
 
 type RegionalPreference = {
   locale: string;
@@ -83,11 +83,8 @@ export function getRegionalPreference(): RegionalPreference {
   if (regionOverride === "HK" || regionOverride === "HKD") {
     return { locale: "zh-HK", currency: "HKD", regionLabel: "Hong Kong", isHongKong: true };
   }
-  if (regionOverride === "JP" || regionOverride === "GLOBAL") {
+  if (regionOverride === "JP" || regionOverride === "GLOBAL" || regionOverride === "US" || regionOverride === "USD") {
     return { locale: "ja-JP", currency: "JPY", regionLabel: "Global", isHongKong: false };
-  }
-  if (regionOverride === "US" || regionOverride === "USD") {
-    return { locale: "en-US", currency: "USD", regionLabel: "United States", isHongKong: false };
   }
 
   // No override: default to HKD for HK/China, JPY everywhere else.

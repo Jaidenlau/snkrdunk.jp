@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { api, convertMoney, formatDate, formatMoney, isLoggedIn, pickDefaultCondition } from "@/lib/api";
+import { api, convertMoney, formatDate, formatMoney, getRegionalPreference, isLoggedIn, pickDefaultCondition } from "@/lib/api";
 import type { Card } from "@/lib/types";
 
 type Props = {
@@ -20,10 +20,9 @@ export default function CardItem({ card, onMessage }: Props) {
       return;
     }
     try {
-      // Convert market price to USD so the stored purchase_price_currency is always stable
-      // and doesn't break if card.currency changes on a future sync.
-      const priceInUsd = convertMoney(displayPrice ?? 0, displayCurrency, "USD");
-      await api.addPortfolioItem(card.id, 1, priceInUsd, "USD");
+      const userCurrency = getRegionalPreference().currency;
+      const priceInUserCurrency = convertMoney(displayPrice ?? 0, displayCurrency, userCurrency);
+      await api.addPortfolioItem(card.id, 1, priceInUserCurrency, userCurrency);
       onMessage?.(`${card.name} was added to your portfolio.`);
     } catch (error) {
       onMessage?.(error instanceof Error ? error.message : "Could not add card to portfolio.");

@@ -20,7 +20,8 @@ export default function PortfolioTable({
   const totals = items.reduce(
     (acc, item) => {
       const cardCurrency = item.card.currency ?? "JPY";
-      const totalCost = item.quantity * convertMoney(item.purchase_price, cardCurrency, displayCurrency);
+      const priceCurrency = item.purchase_price_currency ?? cardCurrency;
+      const totalCost = item.quantity * convertMoney(item.purchase_price, priceCurrency, displayCurrency);
       const currentValue = item.quantity * convertMoney(item.card.current_price ?? 0, cardCurrency, displayCurrency);
       acc.totalCost += totalCost;
       acc.currentValue += currentValue;
@@ -86,7 +87,8 @@ export default function PortfolioTable({
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => {
           const cardCurrency = item.card.currency ?? "JPY";
-          const totalCost = item.quantity * convertMoney(item.purchase_price, cardCurrency, displayCurrency);
+          const priceCurrency = item.purchase_price_currency ?? cardCurrency;
+          const totalCost = item.quantity * convertMoney(item.purchase_price, priceCurrency, displayCurrency);
           const currentValue = item.quantity * convertMoney(item.card.current_price ?? 0, cardCurrency, displayCurrency);
           const rowProfitLoss = currentValue - totalCost;
           const rowPercent = totalCost > 0 ? (rowProfitLoss / totalCost) * 100 : 0;
@@ -158,8 +160,9 @@ function PortfolioCard({
   }, [storedCurrency, displayCurrency, item.purchase_price, item.quantity]);
 
   const currentPrice = convertMoney(item.card.current_price, cardCurrency, displayCurrency);
-  // Always store purchase price in USD so it stays stable even if card.currency changes between syncs.
-  const storedPurchasePrice = convertMoney(purchasePrice, displayCurrency, "USD");
+  // purchasePrice is already in displayCurrency — store as-is with an explicit currency tag
+  // so it stays stable even if card.currency changes between syncs.
+  const storedPurchasePrice = purchasePrice;
 
   return (
     <article className="group relative overflow-hidden rounded-[2rem] border border-white bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/70 transition hover:-translate-y-1 hover:shadow-[0_28px_70px_rgba(15,23,42,0.14)]">
@@ -233,7 +236,7 @@ function PortfolioCard({
         </label>
         <button
           disabled={saving}
-          onClick={() => onUpdate(item, quantity, storedPurchasePrice, "USD")}
+          onClick={() => onUpdate(item, quantity, storedPurchasePrice, displayCurrency)}
           className="rounded-full bg-slate-950 px-4 py-2.5 text-xs font-black text-white transition hover:bg-emerald-600 disabled:opacity-50"
         >
           Save

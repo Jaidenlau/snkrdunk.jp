@@ -110,18 +110,12 @@ export default function HomePage() {
   }
 
   function toggleRegion() {
-    // Cycle every supported display currency and keep the user's choice after refresh.
-    const nextRegion = displayCurrency === "JPY" ? "HK" : displayCurrency === "HKD" ? "US" : "JP";
+    const nextRegion = displayCurrency === "JPY" ? "HK" : "JP";
     window.localStorage.setItem("snkrdunk_region", nextRegion);
     window.location.href = `/?region=${nextRegion}`;
   }
 
-  const nextCurrencyLabel =
-    displayCurrency === "JPY"
-      ? "Switch to HKD (HK$)"
-      : displayCurrency === "HKD"
-        ? "Switch to USD (US$)"
-        : "Switch to JPY (¥)";
+  const nextCurrencyLabel = displayCurrency === "JPY" ? "Switch to HKD (HK$)" : "Switch to JPY (¥)";
 
   return (
     <div className="space-y-10">
@@ -167,7 +161,7 @@ export default function HomePage() {
                 disabled={syncing}
                 className="rounded-full bg-yellow-300 px-6 py-3 text-sm font-black text-slate-950 shadow-xl shadow-yellow-300/20 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {syncing ? "Syncing top 500..." : "Sync latest top 500"}
+                {syncing ? "Syncing..." : "Sync latest cards"}
               </button>
               <a
                 href="https://snkrdunk.com/en/brands/pokemon/trading-cards?categoryId=25"
@@ -247,7 +241,7 @@ export default function HomePage() {
         <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">Market watch</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Top 500 Pokemon Cards</h2>
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Top Pokemon Cards</h2>
             <p className="mt-2 text-sm text-slate-600">
               Updated from SNKRDUNK and shown with clear sold-price versus listing-fallback labels.
             </p>
@@ -303,7 +297,7 @@ function FeaturedCard({ card }: { card: Card }) {
         <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-200">#{card.popularity_rank}</p>
         <p className="mt-1 line-clamp-2 text-sm font-black leading-snug text-white">{card.name}</p>
         <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-          {isSold ? `Avg of last ${psa10?.sales_count || 3} sold` : "Listing (no recent PSA 10 sold)"}
+          {isSold ? `Avg of last ${psa10?.sales_count || 5} sold` : "Listing (no recent PSA 10 sold)"}
         </p>
       </div>
       <div
@@ -338,7 +332,7 @@ function SpotlightCard({ card }: { card: Card }) {
         <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">SNKRDUNK #{card.snkrdunk_id}</p>
         <h3 className="mt-2 line-clamp-2 min-h-12 text-base font-black leading-snug">{card.name}</h3>
         <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-          PSA 10 · {isSold ? `avg of last ${psa10?.sales_count || 3} sold` : "no recent sold · listing"}
+          PSA 10 · {isSold ? `avg of last ${psa10?.sales_count || 5} sold` : "no recent sold · listing"}
         </p>
         <div className="mt-3 flex items-center justify-between">
           <span

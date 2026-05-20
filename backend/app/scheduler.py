@@ -17,7 +17,7 @@ SYNC_INTERVAL_HOURS = int(os.getenv("SYNC_INTERVAL_HOURS", "2") or 2)
 # Hot sync of the most-popular subset. The client wants near-realtime updates,
 # so we refresh the top N cards on a much faster cadence. Tuned to stay under
 # SNKRDUNK's public rate-limits: ~2 requests per card × 200 cards, plus delay/jitter.
-HOT_SYNC_TOP_N = int(os.getenv("HOT_SYNC_TOP_N", "200") or 200)
+HOT_SYNC_TOP_N = int(os.getenv("HOT_SYNC_TOP_N", "300") or 300)
 HOT_SYNC_INTERVAL_MINUTES = int(os.getenv("HOT_SYNC_INTERVAL_MINUTES", "10") or 10)
 
 # Run a full sync shortly after boot so a freshly-restarted backend doesn't
