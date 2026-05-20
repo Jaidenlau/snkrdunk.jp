@@ -32,7 +32,7 @@ export default function PortfolioTable({
   const profitLoss = totals.currentValue - totals.totalCost;
   const profitLossPercent = totals.totalCost > 0 ? (profitLoss / totals.totalCost) * 100 : 0;
 
-  async function updateItem(item: PortfolioItem, quantity: number, purchasePrice: number, purchasePriceCurrency = "USD") {
+  async function updateItem(item: PortfolioItem, quantity: number, purchasePrice: number, purchasePriceCurrency = "JPY") {
     setSavingId(item.id);
     setError("");
     try {
@@ -146,7 +146,7 @@ function PortfolioCard({
 }) {
   const [quantity, setQuantity] = useState(item.quantity);
   const cardCurrency = item.card.currency ?? "JPY";
-  // Use the stored purchase_price_currency when available (new rows always use USD).
+  // Use the stored purchase_price_currency when available (new rows store the user's display currency).
   // Legacy rows (null) fall back to cardCurrency for backward compatibility.
   const storedCurrency = item.purchase_price_currency ?? cardCurrency;
   const [purchasePrice, setPurchasePrice] = useState(
