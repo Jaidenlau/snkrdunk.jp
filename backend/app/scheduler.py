@@ -26,35 +26,38 @@ HOT_SYNC_INTERVAL_MINUTES = int(os.getenv("HOT_SYNC_INTERVAL_MINUTES", "10") or 
 RUN_FULL_SYNC_ON_STARTUP = os.getenv("RUN_FULL_SYNC_ON_STARTUP", "true").lower() != "false"
 
 scheduler = BackgroundScheduler(timezone="UTC")
-_sync_lock = threading.Lock()
-
-
-def _run_sync_job(label: str, limit: int) -> int:
-    if not _sync_lock.acquire(blocking=False):
-        logger.info("%s skipped because another SNKRDUNK sync is already running.", label)
-        return 0
-    try:
-        return sync_top_pokemon_cards(limit=limit)
-    finally:
-        _sync_lock.release()
+# Separate locks so the fast hot-sync is never blocked by the slow full sync.
+_full_sync_lock = threading.Lock()
+_hot_sync_lock = threading.Lock()
 
 
 def scheduled_sync() -> None:
-    synced = _run_sync_job("Scheduled SNKRDUNK full sync", DEFAULT_TRACKED_CARD_LIMIT)
-    logger.info("Scheduled SNKRDUNK full sync finished. Cards synced: %s", synced)
+    if not _full_sync_lock.acquire(blocking=False):
+        logger.info("Full sync skipped — already running.")
+        return
+    try:
+        synced = sync_top_pokemon_cards(limit=DEFAULT_TRACKED_CARD_LIMIT)
+        logger.info("Scheduled SNKRDUNK full sync finished. Cards synced: %s", synced)
+    finally:
+        _full_sync_lock.release()
 
 
 def hot_sync() -> None:
     """Refresh just the most-popular cards on a fast cadence.
 
-    Most user activity hits the top of the popularity list, so updating those
-    every ~10 minutes is the closest we can get to "near-realtime" without
-    triggering SNKRDUNK's IP blocks (a full 2000-card sync still takes time).
+    Runs concurrently with the full sync so top cards always get their
+    10-minute updates even while the slow 5000-card full sync is in progress.
     """
     if HOT_SYNC_TOP_N <= 0:
         return
-    synced = _run_sync_job("Hot sync", HOT_SYNC_TOP_N)
-    logger.info("Hot sync (top %s) finished. Cards synced: %s", HOT_SYNC_TOP_N, synced)
+    if not _hot_sync_lock.acquire(blocking=False):
+        logger.info("Hot sync skipped — already running.")
+        return
+    try:
+        synced = sync_top_pokemon_cards(limit=HOT_SYNC_TOP_N)
+        logger.info("Hot sync (top %s) finished. Cards synced: %s", HOT_SYNC_TOP_N, synced)
+    finally:
+        _hot_sync_lock.release()
 
 
 def start_scheduler() -> None:
