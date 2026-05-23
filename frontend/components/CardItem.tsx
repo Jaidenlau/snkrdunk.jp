@@ -13,6 +13,9 @@ export default function CardItem({ card, onMessage }: Props) {
   const defaultCondition = pickDefaultCondition(card);
   const displayPrice = defaultCondition?.min_price ?? card.current_price;
   const displayCurrency = defaultCondition?.currency ?? card.currency;
+  // Only show price when we have ≥3 real sold transactions; hide listing fallbacks entirely.
+  const hasValidPrice =
+    defaultCondition?.price_source === "sold_avg" && (defaultCondition?.sales_count ?? 0) > 2;
 
   async function addToPortfolio() {
     if (!isLoggedIn()) {
@@ -51,9 +54,11 @@ export default function CardItem({ card, onMessage }: Props) {
             Image unavailable
           </div>
         )}
-        <span className="absolute left-4 top-4 rounded-full bg-yellow-300 px-3 py-1 text-xs font-black text-slate-950 shadow-lg shadow-yellow-300/30">
-          #{card.popularity_rank ?? "N/A"}
-        </span>
+        {card.popularity_rank != null && card.popularity_rank <= 50 ? (
+          <span className="absolute left-4 top-4 rounded-full bg-yellow-300 px-3 py-1 text-xs font-black text-slate-950 shadow-lg shadow-yellow-300/30">
+            #{card.popularity_rank}
+          </span>
+        ) : null}
       </Link>
       <div className="flex flex-1 flex-col gap-4 p-5">
         <div>
@@ -65,22 +70,25 @@ export default function CardItem({ card, onMessage }: Props) {
         </div>
         <div className="mt-auto flex items-center justify-between gap-3">
           <div className="flex flex-col">
-            <span
-              className={`rounded-full px-3 py-2 text-sm font-black ring-1 ${
-                defaultCondition?.price_source === "sold_avg"
-                  ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                  : "bg-amber-50 text-amber-800 ring-amber-100"
-              }`}
-            >
-              {formatMoney(displayPrice, displayCurrency)}
-            </span>
-            <span className="mt-1 px-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
-              {defaultCondition?.condition_name ?? "Lowest"}
-              {" · "}
-              {defaultCondition?.price_source === "sold_avg"
-                ? `avg of last ${defaultCondition.sales_count || 5} sold`
-                : "no recent sold · listing"}
-            </span>
+            {hasValidPrice ? (
+              <>
+                <span className="rounded-full bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700 ring-1 ring-emerald-100">
+                  {formatMoney(displayPrice, displayCurrency)}
+                </span>
+                <span className="mt-1 px-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  PSA 10 · avg of last {defaultCondition?.sales_count || 5} sold
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-400 ring-1 ring-slate-200">
+                  —
+                </span>
+                <span className="mt-1 px-1 text-[10px] font-black uppercase tracking-wide text-slate-400">
+                  No price data
+                </span>
+              </>
+            )}
           </div>
           <button
             onClick={addToPortfolio}

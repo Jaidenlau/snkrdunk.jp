@@ -452,7 +452,7 @@ def _fetch_trading_cards_api(limit: int) -> List[Dict[str, Any]]:
     session = _session()
     products: List[Dict[str, Any]] = []
     page = 1
-    per_page = min(max(limit, 1), 50)
+    per_page = min(max(limit, 1), 100)
 
     while len(products) < limit:
         logger.info(

@@ -285,7 +285,7 @@ function MiniStat({ label, value, hint }: { label: string; value: string; hint?:
 
 function FeaturedCard({ card }: { card: Card }) {
   const psa10 = card.condition_prices?.find((cp) => cp.condition_name === "PSA 10");
-  const isSold = psa10?.price_source === "sold_avg";
+  const hasValidPrice = psa10?.price_source === "sold_avg" && (psa10?.sales_count ?? 0) > 2;
   return (
     <div className="group flex items-center gap-4 rounded-3xl border border-white/10 bg-white/10 p-3 transition hover:bg-white/15">
       <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-2xl bg-white/10">
@@ -297,23 +297,25 @@ function FeaturedCard({ card }: { card: Card }) {
         <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-200">#{card.popularity_rank}</p>
         <p className="mt-1 line-clamp-2 text-sm font-black leading-snug text-white">{card.name}</p>
         <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-          {isSold ? `Avg of last ${psa10?.sales_count || 5} sold` : "Listing (no recent PSA 10 sold)"}
+          {hasValidPrice ? `Avg of last ${psa10?.sales_count} sold` : "No price data"}
         </p>
       </div>
-      <div
-        className={`rounded-2xl px-3 py-2 text-sm font-black text-slate-950 ${
-          isSold ? "bg-emerald-300" : "bg-amber-200"
-        }`}
-      >
-        {formatMoney(card.current_price, card.currency)}
-      </div>
+      {hasValidPrice ? (
+        <div className="rounded-2xl bg-emerald-300 px-3 py-2 text-sm font-black text-slate-950">
+          {formatMoney(psa10?.min_price, psa10?.currency ?? card.currency)}
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-white/10 px-3 py-2 text-sm font-black text-slate-400">
+          —
+        </div>
+      )}
     </div>
   );
 }
 
 function SpotlightCard({ card }: { card: Card }) {
   const psa10 = card.condition_prices?.find((cp) => cp.condition_name === "PSA 10");
-  const isSold = psa10?.price_source === "sold_avg";
+  const hasValidPrice = psa10?.price_source === "sold_avg" && (psa10?.sales_count ?? 0) > 2;
   return (
     <a
       href={`/cards/${card.id}`}
@@ -324,24 +326,28 @@ function SpotlightCard({ card }: { card: Card }) {
         {card.image_url ? (
           <img src={card.image_url} alt={card.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-105" />
         ) : null}
-        <span className="absolute left-3 top-3 rounded-full bg-yellow-300 px-3 py-1 text-xs font-black text-slate-950">
-          #{card.popularity_rank}
-        </span>
+        {card.popularity_rank != null && card.popularity_rank <= 50 ? (
+          <span className="absolute left-3 top-3 rounded-full bg-yellow-300 px-3 py-1 text-xs font-black text-slate-950">
+            #{card.popularity_rank}
+          </span>
+        ) : null}
       </div>
       <div className="relative mt-4">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">SNKRDUNK #{card.snkrdunk_id}</p>
         <h3 className="mt-2 line-clamp-2 min-h-12 text-base font-black leading-snug">{card.name}</h3>
         <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-          PSA 10 · {isSold ? `avg of last ${psa10?.sales_count || 5} sold` : "no recent sold · listing"}
+          PSA 10 · {hasValidPrice ? `avg of last ${psa10?.sales_count} sold` : "no price data"}
         </p>
         <div className="mt-3 flex items-center justify-between">
-          <span
-            className={`rounded-full px-3 py-2 text-sm font-black text-slate-950 ${
-              isSold ? "bg-emerald-300" : "bg-amber-200"
-            }`}
-          >
-            {formatMoney(card.current_price, card.currency)}
-          </span>
+          {hasValidPrice ? (
+            <span className="rounded-full bg-emerald-300 px-3 py-2 text-sm font-black text-slate-950">
+              {formatMoney(psa10?.min_price, psa10?.currency ?? card.currency)}
+            </span>
+          ) : (
+            <span className="rounded-full bg-white/10 px-3 py-2 text-sm font-black text-slate-400">
+              —
+            </span>
+          )}
           <span className="text-xs font-bold text-slate-300 transition group-hover:text-white">View card</span>
         </div>
       </div>
