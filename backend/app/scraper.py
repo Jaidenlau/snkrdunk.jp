@@ -449,60 +449,88 @@ def _extract_products_from_json(payload: Any, limit: int) -> List[Dict[str, Any]
 
 
 def _fetch_trading_cards_api(limit: int) -> List[Dict[str, Any]]:
+    """Fetch up to `limit` Pokemon trading cards from SNKRDUNK.
+
+    SNKRDUNK caps any single ordered query at ~2000 results. To reach 5000+ we
+    iterate over multiple sort orders (popular → new → low_price → high_price),
+    deduplicating by snkrdunk_id, so each ordering reveals a different slice of
+    the full catalog. categoryId filter is intentionally omitted — restricting to
+    one category was the original reason only 2000 cards were returned.
+    """
     session = _session()
-    products: List[Dict[str, Any]] = []
-    page = 1
+    seen_ids: set = set()
+    all_products: List[Dict[str, Any]] = []
     per_page = min(max(limit, 1), 100)
 
-    while len(products) < limit:
-        logger.info(
-            "Trying SNKRDUNK trading cards API: %s page=%s perPage=%s order=popular",
-            POKEMON_TRADING_CARDS_API_URL,
-            page,
-            per_page,
-        )
-        try:
-            response = _snkrdunk_get(
-                session,
-                POKEMON_TRADING_CARDS_API_URL,
-                params={
-                    "brandId": "pokemon",
-                    "categoryId": 25,
-                    "page": page,
-                    "perPage": per_page,
-                    "order": "popular",
-                },
-                timeout=20,
-                mark_blocking=False,
+    # Each sort order exposes a different slice of SNKRDUNK's catalog.
+    sort_orders = ["popular", "new", "low_price", "high_price"]
+
+    for order in sort_orders:
+        if len(all_products) >= limit:
+            break
+        page = 1
+        order_added = 0
+        while len(all_products) < limit:
+            logger.info(
+                "Trying SNKRDUNK trading cards API: page=%s perPage=%s order=%s total_so_far=%s",
+                page,
+                per_page,
+                order,
+                len(all_products),
             )
-            response.raise_for_status()
-            payload = response.json()
-        except requests.RequestException as exc:
-            logger.warning("SNKRDUNK trading cards API request failed: %s", exc)
-            break
-        except ValueError as exc:
-            logger.warning("SNKRDUNK trading cards API returned invalid JSON: %s", exc)
-            break
+            try:
+                response = _snkrdunk_get(
+                    session,
+                    POKEMON_TRADING_CARDS_API_URL,
+                    params={
+                        "brandId": "pokemon",
+                        "page": page,
+                        "perPage": per_page,
+                        "order": order,
+                    },
+                    timeout=20,
+                    mark_blocking=False,
+                )
+                response.raise_for_status()
+                payload = response.json()
+            except requests.RequestException as exc:
+                logger.warning("SNKRDUNK trading cards API request failed (order=%s): %s", order, exc)
+                break
+            except ValueError as exc:
+                logger.warning("SNKRDUNK trading cards API invalid JSON (order=%s): %s", order, exc)
+                break
 
-        trading_cards = payload.get("tradingCards") if isinstance(payload, dict) else None
-        if not isinstance(trading_cards, list) or not trading_cards:
-            logger.info("SNKRDUNK trading cards API returned no tradingCards list")
-            break
+            trading_cards = payload.get("tradingCards") if isinstance(payload, dict) else None
+            if not isinstance(trading_cards, list) or not trading_cards:
+                logger.info("No tradingCards returned for order=%s page=%s", order, page)
+                break
 
-        for item in trading_cards:
-            if not isinstance(item, dict) or len(products) >= limit:
-                continue
-            product = _normalize_trading_card_api_item(item, len(products) + 1)
-            if product:
-                products.append(product)
+            page_new = 0
+            for item in trading_cards:
+                if not isinstance(item, dict) or len(all_products) >= limit:
+                    continue
+                product = _normalize_trading_card_api_item(item, len(all_products) + 1)
+                if product and product["snkrdunk_id"] not in seen_ids:
+                    seen_ids.add(product["snkrdunk_id"])
+                    all_products.append(product)
+                    page_new += 1
 
-        if len(trading_cards) < per_page:
-            break
-        page += 1
+            order_added += page_new
+            if len(trading_cards) < per_page:
+                break  # last page for this sort order
+            if page_new == 0:
+                break  # all cards on this page were duplicates — move to next order
+            page += 1
 
-    if products:
-        logger.info("SNKRDUNK trading cards API returned %s products", len(products))
-    return products
+        logger.info("order=%s contributed %s new unique cards (total=%s)", order, order_added, len(all_products))
+
+    # Re-assign popularity_rank sequentially after merging all orderings.
+    for i, product in enumerate(all_products):
+        product["popularity_rank"] = i + 1
+
+    if all_products:
+        logger.info("SNKRDUNK trading cards API returned %s unique products total", len(all_products))
+    return all_products
 
 
 def _fetch_api_candidates(limit: int) -> List[Dict[str, Any]]:
