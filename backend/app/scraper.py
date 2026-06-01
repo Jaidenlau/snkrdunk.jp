@@ -449,20 +449,21 @@ def _extract_products_from_json(payload: Any, limit: int) -> List[Dict[str, Any]
 
 
 def _fetch_trading_cards_api(limit: int) -> List[Dict[str, Any]]:
-    """Fetch up to `limit` Pokemon trading cards from SNKRDUNK.
+    """Fetch up to `limit` individual graded Pokemon trading cards from SNKRDUNK.
 
-    SNKRDUNK caps any single ordered query at ~2000 results. To reach 5000+ we
-    iterate over multiple sort orders (popular → new → low_price → high_price),
-    deduplicating by snkrdunk_id, so each ordering reveals a different slice of
-    the full catalog. categoryId filter is intentionally omitted — restricting to
-    one category was the original reason only 2000 cards were returned.
+    categoryId=25 is required to filter to individual graded cards only — without
+    it the API returns booster boxes and sets instead. SNKRDUNK paginates at 100
+    cards/page for this category and continues past page 30+, so the original
+    2000-card cap was entirely caused by the old DEFAULT_TRACKED_CARD_LIMIT=2000
+    stopping the loop early. Multiple sort orders are used as a safety net to
+    surface any cards that popular-order pagination misses.
     """
     session = _session()
     seen_ids: set = set()
     all_products: List[Dict[str, Any]] = []
     per_page = min(max(limit, 1), 100)
 
-    # Each sort order exposes a different slice of SNKRDUNK's catalog.
+    # Each sort order exposes a different slice of SNKRDUNK's graded card catalog.
     sort_orders = ["popular", "new", "low_price", "high_price"]
 
     for order in sort_orders:
@@ -484,6 +485,7 @@ def _fetch_trading_cards_api(limit: int) -> List[Dict[str, Any]]:
                     POKEMON_TRADING_CARDS_API_URL,
                     params={
                         "brandId": "pokemon",
+                        "categoryId": 25,
                         "page": page,
                         "perPage": per_page,
                         "order": order,
