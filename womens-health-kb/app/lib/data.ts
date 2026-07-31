@@ -13,11 +13,35 @@ export async function getStages(markets: Market[]): Promise<JourneyStage[]> {
   );
 }
 
-export async function getStage(id: string): Promise<{ stage: JourneyStage; claims: Claim[] } | null> {
+export interface NeedWithSolutions {
+  id: string;
+  need_description: string;
+  gap_analysis: string | null;
+  competitors: { id: string; company: string }[];
+}
+
+export async function getStage(
+  id: string
+): Promise<{ stage: JourneyStage; claims: Claim[]; needs: NeedWithSolutions[] } | null> {
   const [stage] = await q<JourneyStage>(`select * from journey_stages where id = $1`, [id]);
   if (!stage) return null;
   const claims = await getClaimsForStage(id);
-  return { stage, claims };
+
+  // Cross-linking: needs attached to this stage, and the competitors that address them.
+  const needs = await q<NeedWithSolutions>(
+    `select n.id, n.need_description, n.gap_analysis,
+            coalesce(
+              (select json_agg(json_build_object('id', c.id, 'company', c.company))
+               from need_solutions ns join competitors c on c.id = ns.competitor_id
+               where ns.need_id = n.id),
+              '[]'::json
+            ) as competitors
+     from needs n
+     join stage_needs sn on sn.need_id = n.id
+     where sn.journey_stage_id = $1`,
+    [id]
+  );
+  return { stage, claims, needs };
 }
 
 export async function getClaimsForStage(stageId: string): Promise<Claim[]> {

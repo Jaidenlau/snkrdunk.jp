@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function StagePage({ params }: { params: { id: string } }) {
   const data = await getStage(params.id);
   if (!data) notFound();
-  const { stage, claims } = data;
+  const { stage, claims, needs } = data;
 
   return (
     <>
@@ -49,6 +49,31 @@ export default async function StagePage({ params }: { params: { id: string } }) 
           ))}
           {claims.length === 0 && <p className="text-muted">No published entries yet for this stage.</p>}
         </div>
+
+        {needs.length > 0 && (
+          <>
+            <h2 className="mt-10 mb-1 text-lg font-semibold tracking-tight">What this stage needs — and who addresses it</h2>
+            <p className="text-sm text-muted mb-3">Cross-linked from the needs map to the competitor landscape.</p>
+            <div className="space-y-3">
+              {needs.map((n) => (
+                <div key={n.id} className="card p-4">
+                  <p className="text-[15px]">{n.need_description}</p>
+                  {n.gap_analysis && (
+                    <p className="mt-1.5 text-xs text-muted border-l-2 border-line pl-2.5">Gap: {n.gap_analysis}</p>
+                  )}
+                  {n.competitors.length > 0 && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] uppercase tracking-wide text-muted">Addressed by</span>
+                      {n.competitors.map((c) => (
+                        <Link key={c.id} href="/competitors" className="chip py-1 text-xs">{c.company}</Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </main>
     </>
   );

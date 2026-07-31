@@ -1,5 +1,6 @@
 import Nav from "@/components/Nav";
 import MarketFilter from "@/components/MarketFilter";
+import SearchBar from "@/components/SearchBar";
 import EvidenceBadge from "@/components/EvidenceBadge";
 import MarketTag from "@/components/MarketTag";
 import ClaimCard from "@/components/ClaimCard";
@@ -40,6 +41,9 @@ export default async function Dashboard({ searchParams }: { searchParams: { mark
             Browse the journey stage by stage across four markets. Every entry is checked against its source
             before it goes in — and where markets genuinely disagree, both sides are shown side by side.
           </p>
+          <div className="mt-5 max-w-2xl">
+            <SearchBar />
+          </div>
         </div>
 
         {/* Stat tiles */}

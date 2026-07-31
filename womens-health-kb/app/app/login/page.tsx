@@ -1,8 +1,17 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
+  // useSearchParams must be under a Suspense boundary for the production build.
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [password, setPassword] = useState("");
