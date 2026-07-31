@@ -70,6 +70,16 @@ export async function getConflicts(): Promise<Claim[]> {
   return attachSources(claims);
 }
 
+// All claims, any status, for the reviewer cockpit — ordered draft → pending → confirmed.
+export async function getReviewClaims(): Promise<Claim[]> {
+  const claims = await q<Claim>(
+    `select * from claims
+     order by array_position(array['draft','in_review','published']::text[], status::text),
+              human_confirmed, market, life_stage`
+  );
+  return attachSources(claims);
+}
+
 async function attachSources(claims: Claim[]): Promise<Claim[]> {
   if (!claims.length) return claims;
   const ids = claims.map((c) => c.id);

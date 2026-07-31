@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/", label: "Journey" },
   { href: "/competitors", label: "Competitors" },
   { href: "/chat", label: "Ask" },
+  { href: "/review", label: "Review" },
 ];
 
 export default function Nav() {
