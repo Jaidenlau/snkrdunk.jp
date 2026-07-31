@@ -9,8 +9,9 @@ structured knowledge records and the RAG embeddings, so the Knowledge Base and t
 | File | What it does |
 |---|---|
 | `migrations/0001_schema.sql` | Full schema: vocab enums, core tables, cross-links, embeddings + vector index, publish invariants. Implements `../SCHEMA.md`. |
-| `migrations/0002_provenance.sql` | Provenance + verification integrity: source `excerpt` + `checked_on`, `human_confirmed` flag, and a strengthened publish rule (no publish without a recorded quote). See `../VERIFICATION.md`. |
-| `seed/0001_pilot_postpartum_confinement.sql` | Source-verified pilot data (postpartum confinement across US/EU/CN/AU), each published claim with a real source, excerpt, and check date. Requires 0001 + 0002 first. |
+| `migrations/0002_provenance.sql` | Provenance: source `excerpt` + `checked_on`, and a publish rule requiring a recorded quote. |
+| `migrations/0003_automated_verification.sql` | Automated verification (no human step): `grounded`, `entailment_confidence`, `corroboration_count`, `claim_relations`; publish requires grounded + entailment ≥ 0.7. See `../VERIFICATION.md`. |
+| `seed/0001_pilot_postpartum_confinement.sql` | Pilot data with the automated verification verdict recorded. Requires 0001 + 0002 + 0003 first. |
 
 ## Run against Supabase
 
@@ -24,6 +25,7 @@ structured knowledge records and the RAG embeddings, so the Knowledge Base and t
 createdb whkb
 psql -d whkb -v ON_ERROR_STOP=1 -f migrations/0001_schema.sql
 psql -d whkb -v ON_ERROR_STOP=1 -f migrations/0002_provenance.sql
+psql -d whkb -v ON_ERROR_STOP=1 -f migrations/0003_automated_verification.sql
 psql -d whkb -v ON_ERROR_STOP=1 -f seed/0001_pilot_postpartum_confinement.sql
 ```
 

@@ -1,15 +1,15 @@
 import Nav from "@/components/Nav";
-import ReviewCockpit from "@/components/ReviewCockpit";
+import AuditView from "@/components/AuditView";
 import { getReviewClaims } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReviewPage() {
+export default async function AuditPage() {
   const claims = await getReviewClaims();
   return (
     <>
       <Nav />
-      <ReviewCockpit claims={claims} />
+      <AuditView claims={claims} />
     </>
   );
 }

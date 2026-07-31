@@ -14,7 +14,7 @@ all on one shared data architecture across four markets (US, Europe, China, Aust
 
 | Decision | Choice | Implication for the build |
 |---|---|---|
-| **Verification authority** | Autoploy is the human judgment layer. We source, extract, and rate. | We need a **defensible, written rating rubric** (see `EVIDENCE-RUBRIC.md`) so every rating is standing on a method, not a vibe. |
+| **Verification authority** | An **automated verification pipeline** — no human-confirm step. The AI may only surface a claim whose supporting quote is verbatim-grounded in a real source and survives adversarial entailment. | See `VERIFICATION.md`: four machine-checked gates, enforced by the database. Accuracy scales without a person in the loop. |
 | **Access posture** | Private, login-gated web app. One URL, invite-only. | Auth from day one. Keeps the asset hidden — that secrecy *is* part of the moat. Public exposure is a later, deliberate choice. |
 | **AI API keys** | Autoploy's keys during build; swap to client's keys on handoff. | All model/provider config lives in env vars. Handoff = swap keys, no code change. |
 | **Content strategy** | Depth-first. Small, excellent slice → sign-off → scale. | We build **one narrow vertical slice through the entire stack first**, prove quality, then mass-produce. |
@@ -61,7 +61,7 @@ One shared data spine, two windows onto it.
   their embeddings live in the same database — this is literally the proposal's "one shared
   data architecture," not two systems kept in sync.
 - **App:** Next.js on Vercel. Dashboard and Chatbot are two views inside one login-gated app.
-- **Content pipeline:** AI agents draft & extract → **human review + evidence rating (us)** →
+- **Content pipeline:** AI agents draft & extract → **automated verification (retrieve → verbatim-ground → adversarial entailment)** →
   publish → auto-embed for retrieval.
 - **RAG:** KB chunks are embedded with metadata (life_stage, market, evidence_level) so the
   chatbot can retrieve *market-filtered, evidence-tagged* passages and cite them — not generate

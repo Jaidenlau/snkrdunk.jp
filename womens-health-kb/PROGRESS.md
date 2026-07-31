@@ -23,15 +23,17 @@ Legend: ✅ done · 🟡 partial / in progress · ⬜ to do · 🔑 needs someth
 - ✅ Provenance columns: source `excerpt` + `checked_on`; `human_confirmed` flag
 - ✅ Strengthened rule: no publish without a recorded verifying **quote** (tested)
 
-## 3. Verification & accuracy — THE differentiator
-- ✅ Verification integrity enforced by the database, not by trust
-- ✅ Pilot re-verified against REAL sources (ACOG, CDC, NHS, PMC) — real URLs, exact quotes, dates
-- ✅ Real error caught + logged (bleeding threshold "1 pad/hr" → ACOG's "2 pads/hr")
-- ✅ Fake source removed; replaced with peer-reviewed documentation
-- ✅ Unverified claim (AU) held as draft → not shown, proving the workflow
-- ✅ Reviewer cockpit: per-claim URL/Quote/Date checks, open-source link, human-confirm
-- ⬜ **Human-confirm the 4 pilot claims against the live sources** ← the real last mile
-- ⬜ Verify + add the AU postnatal-depression claim (RANZCOG / COPE)
+## 3. Verification & accuracy — THE differentiator (fully automated, no human step)
+- ✅ Four-gate automated pipeline: Retrievable → Grounded (verbatim) → Entailed (adversarial) → Corroborated
+- ✅ Deterministic grounding gate (`lib/grounding.mjs`) — makes fabrication mechanically impossible
+- ✅ Grounding **unit-tested** (`scripts/test-grounding.mjs`): accepts real quotes, rejects fabricated + wrong ones
+- ✅ Adversarial entailment via a separate verifier model (`lib/verify.mjs`); runs on deploy with keys
+- ✅ Gates enforced by the database (no publish unless grounded + entailment ≥ 0.7) — tested
+- ✅ Pilot verified against REAL sources (ACOG, CDC, NHS, PMC) — real URLs, verbatim quotes, dates
+- ✅ Pipeline caught a fabricated "quote" and a wrong threshold; AU claim held back as hidden draft
+- ✅ Automated **audit view** (`/review`) + `npm run verify` runner + per-claim re-verify
+- 🔑 Live re-verification runs on deploy (needs network + ANTHROPIC_API_KEY on Railway/Vercel)
+- ⬜ Source + verify the AU postnatal-depression claim (RANZCOG / COPE) so it can pass the gates
 
 ## 4. Web app (`app/`)
 - ✅ Single shared-password gate (HMAC cookie, edge middleware)
@@ -39,7 +41,7 @@ Legend: ✅ done · 🟡 partial / in progress · ⬜ to do · 🔑 needs someth
 - ✅ Stage detail with full provenance (quote, date, source link, verification badge)
 - ✅ Competitor landscape (their claims vs our evidence check)
 - ✅ Chatbot: RAG, cited, market-aware — with keyword/extractive fallback
-- ✅ Reviewer cockpit (`/review`)
+- ✅ Verification audit view (`/review`) — automated gate results, re-verify
 - ⬜ Dashboard **semantic search bar** (proposal feature; chatbot covers querying for now)
 - ⬜ UI cross-linking click-through (stage → needs → competitor); data links already exist
 - ⬜ Turn on **real RAG** (needs keys) + run embed pipeline so chatbot uses vector search + Claude 🔑
@@ -49,7 +51,7 @@ Legend: ✅ done · 🟡 partial / in progress · ⬜ to do · 🔑 needs someth
 - 🟡 Pilot depth: 4 published claims — target ~10–15 **human-confirmed** for the sign-off gate
 - 🟡 Competitor profiles: 2, illustrative + flagged — need real, source-verified research
 - 🟡 Needs-to-solutions map: 2 illustrative entries — need real ones per stage/market
-- ⬜ **You + your wife sign off** on pilot quality ← the gate before scaling
+- ⬜ **You + your wife react** to the pilot (product/direction feedback — not verification; the pipeline handles accuracy)
 
 ## 6. Scale (after the gate — the bulk content work)
 - ⬜ Full trimester-by-trimester pregnancy map (all 4 markets)

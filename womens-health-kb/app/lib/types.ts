@@ -38,7 +38,12 @@ export interface Claim {
   status: string;
   reviewer: string | null;
   review_date: string | null;
-  human_confirmed?: boolean;
+  // Automated verification verdict (set by the pipeline, no human step)
+  grounded?: boolean;
+  entailment_confidence?: number | null;
+  corroboration_count?: number;
+  verifier_model?: string | null;
+  verified_at?: string | null;
   sources?: SourceRef[];
 }
 
@@ -50,6 +55,7 @@ export interface SourceRef {
   published_date: string | null;
   excerpt?: string | null;
   checked_on?: string | null;
+  grounded?: boolean;
 }
 
 export interface JourneyStage {

@@ -58,13 +58,17 @@ export async function getCompetitors(markets: Market[]): Promise<Competitor[]> {
   );
 }
 
-// Find claims that conflict across markets (a supports link + a contradicts link
-// on the same underlying topic). We surface the confidence_note cross-references.
+// Claims involved in an analytic cross-market conflict relation (AI-derived,
+// between two independently-grounded claims — not fabricated source quotes).
 export async function getConflicts(): Promise<Claim[]> {
   const claims = await q<Claim>(
     `select distinct c.* from claims c
-     join claim_sources cs on cs.claim_id = c.id
-     where c.status='published' and (cs.relation='contradicts' or c.confidence_note ilike '%conflict%')
+     join (
+       select claim_a as id from claim_relations where relation='conflicts'
+       union
+       select claim_b as id from claim_relations where relation='conflicts'
+     ) r on r.id = c.id
+     where c.status='published'
      order by c.market`
   );
   return attachSources(claims);
@@ -74,8 +78,8 @@ export async function getConflicts(): Promise<Claim[]> {
 export async function getReviewClaims(): Promise<Claim[]> {
   const claims = await q<Claim>(
     `select * from claims
-     order by array_position(array['draft','in_review','published']::text[], status::text),
-              human_confirmed, market, life_stage`
+     order by array_position(array['published','in_review','draft']::text[], status::text),
+              grounded desc, market, life_stage`
   );
   return attachSources(claims);
 }
@@ -85,7 +89,7 @@ async function attachSources(claims: Claim[]): Promise<Claim[]> {
   const ids = claims.map((c) => c.id);
   const srcs = await q<any>(
     `select cs.claim_id, s.publisher, s.title, s.url, cs.relation, s.published_date,
-            cs.excerpt, cs.checked_on
+            cs.excerpt, cs.checked_on, cs.grounded
      from claim_sources cs join sources s on s.id = cs.source_id
      where cs.claim_id = any($1::uuid[])`,
     [ids]

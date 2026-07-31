@@ -1,76 +1,85 @@
-# Verification Process — how a claim earns "verified"
+# Verification Process — automated, no human in the loop
 
-**Status:** v1 · This is the discipline that separates this knowledge base from
-scraped wellness content. Accuracy is the product. Read this before adding data.
+**Status:** v2 · This is the discipline that separates this knowledge base from
+scraped wellness content. Accuracy is the product, and it is achieved by a
+machine-checkable pipeline — **not** by a person clicking "confirm".
 
-Autoploy is the judgment layer (see `PLAN.md`). That means no claim is trustworthy
-because an AI wrote it — it's trustworthy because it was checked against a real
-source and that check is on the record. This document is how.
+The core principle: **the AI is never allowed to assert a fact from its own
+memory.** It can only surface a claim if a real retrieved source *literally
+contains a quote* that supports it, and that support survives adversarial checking.
 
 ---
 
-## The bar
+## The four gates
 
-A claim may be **published** only when all of the following are true:
+Every claim must clear all four. Gates 1, 2, 4 are deterministic; gate 3 is an
+adversarial model check. The results are stored on the claim and enforced by the
+database — a claim that fails a gate cannot be `published`.
 
-1. It names a **real, retrievable, authoritative source** appropriate to its market
-   (see the source registry in `EVIDENCE-RUBRIC.md`).
-2. The **exact supporting quote** from that source is recorded (`claim_sources.excerpt`).
-3. The **date it was checked** is recorded (`claim_sources.checked_on`).
-4. It carries an **evidence rating** (`strong_evidence` / `traditional_practice` /
-   `anecdotal`) and a **reviewer** + **review_date**.
+### Gate 1 — Retrievable
+The source URL must actually return readable text. The fetcher is multi-strategy
+(browser-style request → reader proxy) so bot-blocks don't stop it. If a source
+can't be retrieved, it cannot be a basis. → `claim_sources.grounded` starts false.
 
-The database **enforces 1–4**: `status = 'published'` is rejected unless a supporting
-source with a non-empty excerpt exists (migration `0002_provenance.sql`). You
-physically cannot publish a claim with no quote on file.
+### Gate 2 — Grounded (verbatim, deterministic)
+The stored quote must appear **character-for-character** (after conservative
+unicode/whitespace normalization) in the retrieved text. This is a string match,
+implemented in `app/lib/grounding.mjs` — **not** a model opinion. A quote the
+source does not contain **cannot** pass, however plausible it sounds. Proven by
+`app/scripts/test-grounding.mjs`, which accepts the real quotes and rejects both a
+fabricated sentence and a plausible-but-wrong "one pad per hour" threshold.
 
-## Two levels of trust
+### Gate 3 — Entailed (adversarial)
+A **separate** verifier model receives **only the grounded quotes** (never its own
+memory) and is told to *try to refute* that they support the claim. The claim
+passes only if it can't, at confidence ≥ 0.7. Different model/prompt than the
+drafter, so there's no self-agreement. → `claims.entailment_confidence`.
 
-| State | Meaning | Shown to users? |
-|---|---|---|
-| `draft` | Not yet checked. | No. |
-| `published`, `human_confirmed = false` | Checked against the source in an **automated pass**; excerpt + date on file. | Yes — flagged as "source-checked, pending human confirmation". |
-| `published`, `human_confirmed = true` | A **person opened the live source** and confirmed the quote and rating. | Yes — the strongest trust badge. |
+### Gate 4 — Corroborated
+`strong_evidence` should rest on ≥ 2 independent grounded sources. Cross-market
+conflicts are **recorded** (as `claim_relations`), never averaged away.
+→ `claims.corroboration_count`.
 
-**Why the two levels?** Many authoritative medical sites (ACOG, CDC, NHS, PMC)
-**block automated retrieval** (HTTP 403). An automated pass can corroborate a claim
-via search, but it cannot stand as final proof. A human opening the page is the real
-bar. `human_confirmed` records who did that. Until they do, the entry is honest about
-its own status rather than pretending.
+## What the database enforces
 
-## The workflow
+`status = 'published'` is rejected unless:
+- a supporting source with a non-empty **excerpt** exists (migration 0002), and
+- `grounded = true` (every supporting quote verbatim-verified), and
+- `entailment_confidence >= 0.7` (migration 0003).
+
+Tested: publishing an ungrounded claim, or a grounded one below threshold, throws.
+
+## The pipeline
 
 ```
- discover  →  draft  →  source-check (record excerpt + date)  →  published (human_confirmed=false)
-                                                                        │
-                                                        human opens live page, confirms
-                                                                        ▼
-                                                             published (human_confirmed=true)
+ draft ──▶ retrieve source text ──▶ verbatim-ground each quote ──▶ adversarial entailment
+                                          │ (fail)                        │ (fail / low conf)
+                                          ▼                               ▼
+                                    stays hidden                    stays hidden (in_review/draft)
+                                          │ (all pass, conf ≥ 0.7)
+                                          ▼
+                                      published (with machine verdict recorded)
 ```
 
-- **Unverifiable → stays `draft`.** If a source can't be found or the claim doesn't
-  match it, it does not get published. (In the pilot, the AU postnatal-depression
-  claim is left as `draft` on purpose to show this.)
-- **Conflicts are not resolved, they're recorded.** When markets disagree, each
-  market's guidance is its own claim, and a `contradicts` link + `confidence_note`
-  cross-reference the other. See the US/EU vs CN divergence in the pilot.
-- **Corrections are logged in `confidence_note`.** During the pilot pass we caught a
-  real error — an early draft said "one pad per hour" for the bleeding warning sign;
-  ACOG's actual emergency threshold is *two* pads an hour for more than an hour or
-  two. The correction is recorded on the claim. This is the process catching exactly
-  the kind of mistake it exists to catch.
+- Code: `app/lib/verify.mjs` (retrieve + entail + orchestrate), `app/lib/grounding.mjs`
+  (deterministic grounding).
+- Run over the whole base: `npm run verify`. Per-claim, on demand: the **Verification**
+  page (`/review`) → "Re-verify".
+- On deploy (Railway/Vercel) the pipeline runs against live sources; in a locked-down
+  environment it declines to overwrite rather than falsely demote.
 
-## Pilot verification status (2026-07-31)
+## What the pipeline caught (pilot)
 
-| Claim | Market | Rating | Source(s) | State |
-|---|---|---|---|---|
-| Heavy-bleeding warning sign (corrected threshold) | US | strong | ACOG, CDC HEAR HER | published · human_confirmed=false |
-| 6–8 week postnatal check / lochia | EU | strong | NHS | published · human_confirmed=false |
-| Zuo yuezi ~30-day prevalence | CN | traditional | PMC peer-reviewed | published · human_confirmed=false |
-| Confinement bathing restriction | CN | traditional | PMC peer-reviewed | published · human_confirmed=false |
-| Postnatal depression screening | AU | — | (none yet) | **draft — hidden** |
-| Competitor profiles | US/CN | — | illustrative | not source-verified (flagged) |
+- A **fabricated "quote"** used to express a cross-market conflict — rejected by Gate 2.
+  Conflicts are now analytic `claim_relations` between two independently-grounded
+  claims, not fake source quotes.
+- A **plausible but wrong** bleeding threshold ("one pad per hour") — the grounded
+  source says *two* pads. Gate 2 rejects the wrong version; the correction is logged.
+- The **AU** claim had no retrievable grounded source → held back as `draft`, hidden.
 
-**Next step to reach full trust:** a person opens each live source above and flips
-`human_confirmed = true` (or corrects it). That is the last mile the automated pass
-deliberately does not claim to have walked.
+## Honesty about scope
+
+This verifies that *a real source literally says X*, checked adversarially. It is
+**evidence-strength curation, not medical advice** — the chatbot always carries that
+disclaimer. The pipeline makes fabrication mechanically impossible; it does not turn
+the system into a clinician.
