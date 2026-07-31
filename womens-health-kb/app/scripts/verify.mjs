@@ -42,6 +42,15 @@ async function main() {
     );
     const verdict = await verifyClaim({ statement: c.statement, sources });
 
+    // Safety: if EVERY source was unreachable (e.g. the host blocks this IP),
+    // don't overwrite a previously-good verdict — skip rather than falsely demote.
+    const allUnreachable =
+      verdict.perSource.length > 0 && verdict.perSource.every((p) => p.method === "unretrievable");
+    if (allUnreachable) {
+      console.log(`${c.id.slice(0, 8)}  sources unreachable — skipped (verdict preserved)`);
+      continue;
+    }
+
     // Persist per-source grounding.
     for (let i = 0; i < verdict.perSource.length; i++) {
       const ps = verdict.perSource[i];
