@@ -1,0 +1,39 @@
+# Render blueprint for the Pokemon Price Tracker backend (FastAPI).
+#
+# One-click-ish deploy:
+#   1. Push this repo to GitHub.
+#   2. On Render: New +  ->  Blueprint  ->  pick this repo. Render reads this file.
+#   3. Fill in the env vars marked `sync: false` (ADMIN_EMAIL, FRONTEND_ORIGIN).
+#
+# NOTE on data: the free plan has an EPHEMERAL filesystem, so the SQLite database
+# is wiped whenever the service redeploys or cold-starts after idling. That is
+# fine for testing (accounts/portfolios just reset). To make data persist, move
+# to a paid plan with a Disk, or switch DATABASE_URL to a hosted Postgres.
+services:
+  - type: web
+    name: snkrdunk-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      # Auto-generated strong secret so JWTs can never be forged.
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      # The email allowed to call /admin/* endpoints. Register this account in the
+      # app, then you can run syncs / imports from the /admin page.
+      - key: ADMIN_EMAIL
+        sync: false
+      # Your Vercel frontend URL, e.g. https://your-app.vercel.app (comma-separated
+      # for multiple). Needed for CORS. *.vercel.app is already allowed by regex,
+      # but set this once you attach a custom domain like https://snkrdunk.jp.
+      - key: FRONTEND_ORIGIN
+        sync: false
+      # The public HTTP scraper only. Playwright/Chrome are not installed on this
+      # runtime, so keep this false — the sync then fails safe instead of crashing.
+      - key: SNKRDUNK_USE_PLAYWRIGHT
+        value: "false"
+      - key: PYTHON_VERSION
+        value: "3.12.7"

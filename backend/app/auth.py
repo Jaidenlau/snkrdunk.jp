@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -16,7 +17,21 @@ from .database import get_db
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-dev-secret")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    # No secret configured. Rather than fall back to a hardcoded constant (which
+    # would let anyone forge a valid token for any user, including the admin),
+    # generate a strong random one for this process. Tokens won't survive a
+    # restart, but they can never be forged. Set JWT_SECRET_KEY in the
+    # environment for stable sessions across restarts.
+    import secrets
+
+    SECRET_KEY = secrets.token_urlsafe(48)
+    logging.getLogger(__name__).warning(
+        "JWT_SECRET_KEY is not set — using a random per-process secret. "
+        "Existing sessions will be invalidated on every restart. "
+        "Set JWT_SECRET_KEY in the environment for stable, secure sessions."
+    )
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
@@ -53,10 +68,13 @@ def get_current_user(
         user_id = payload.get("sub")
         if user_id is None:
             raise credentials_error
-    except JWTError as exc:
+        user_pk = int(user_id)
+    except (JWTError, ValueError, TypeError) as exc:
+        # ValueError/TypeError guard a token whose `sub` is non-numeric, which
+        # would otherwise raise an uncaught 500 instead of a clean 401.
         raise credentials_error from exc
 
-    user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+    user = db.query(models.User).filter(models.User.id == user_pk).first()
     if user is None:
         raise credentials_error
     return user

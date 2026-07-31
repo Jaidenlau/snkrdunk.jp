@@ -1664,7 +1664,18 @@ def _existing_card_products(db: Session, limit: int) -> List[Dict[str, Any]]:
     return products
 
 
-def sync_top_pokemon_cards(limit: int = DEFAULT_TRACKED_CARD_LIMIT, db: Optional[Session] = None) -> int:
+def sync_top_pokemon_cards(
+    limit: int = DEFAULT_TRACKED_CARD_LIMIT,
+    db: Optional[Session] = None,
+    clear_stale_ranks: bool = True,
+) -> int:
+    """Sync cards from SNKRDUNK.
+
+    ``clear_stale_ranks`` should only be True for a *full* catalog sync. The hot
+    sync fetches just the top N cards, so clearing stale ranks there would null
+    the popularity_rank of every card outside that small window (destroying the
+    homepage ordering until the next full sync). The hot sync passes False.
+    """
     close_db = False
     if db is None:
         db = SessionLocal()
@@ -1682,7 +1693,7 @@ def sync_top_pokemon_cards(limit: int = DEFAULT_TRACKED_CARD_LIMIT, db: Optional
                 len(products),
             )
             return upsert_cards(db, products, clear_stale_ranks=False)
-        return upsert_cards(db, products, clear_stale_ranks=True)
+        return upsert_cards(db, products, clear_stale_ranks=clear_stale_ranks)
     except Exception:
         logger.exception("SNKRDUNK sync failed")
         db.rollback()

@@ -54,7 +54,10 @@ def hot_sync() -> None:
         logger.info("Hot sync skipped — already running.")
         return
     try:
-        synced = sync_top_pokemon_cards(limit=HOT_SYNC_TOP_N)
+        # clear_stale_ranks=False: the hot sync only covers the top N cards, so it
+        # must not null the ranks of every card outside that window (which the full
+        # sync populated). Only the full catalog sync prunes stale ranks.
+        synced = sync_top_pokemon_cards(limit=HOT_SYNC_TOP_N, clear_stale_ranks=False)
         logger.info("Hot sync (top %s) finished. Cards synced: %s", HOT_SYNC_TOP_N, synced)
     finally:
         _hot_sync_lock.release()

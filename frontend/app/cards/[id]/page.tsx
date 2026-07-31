@@ -81,7 +81,10 @@ export default function CardDetailPage() {
     }
     try {
       const storedPurchasePrice = convertMoney(purchasePrice, selectedDisplayCurrency, displayCurrency);
-      await api.addPortfolioItem(card.id, quantity, storedPurchasePrice);
+      // Tag the stored price with the currency it was actually converted into
+      // (the card's native currency). Omitting this defaults the backend to USD,
+      // which corrupts cost basis / profit-loss for JPY/HKD cards on reload.
+      await api.addPortfolioItem(card.id, quantity, storedPurchasePrice, displayCurrency);
       setMessage("Card added to your portfolio.");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Could not add card to portfolio.");

@@ -82,15 +82,27 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Pokemon Price Tracker API", version="0.1.0", lifespan=lifespan)
 
-frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+# Base origins always allowed. FRONTEND_ORIGIN (comma-separated) adds any extra
+# deployment domains — e.g. a Vercel preview/production URL — without a code change.
+_default_origins = [
+    "https://www.snkrdunk.jp",
+    "https://snkrdunk.jp",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+_extra_origins = [
+    origin.strip()
+    for origin in os.getenv("FRONTEND_ORIGIN", "").split(",")
+    if origin.strip()
+]
+allowed_origins = list(dict.fromkeys(_default_origins + _extra_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://www.snkrdunk.jp",
-        "https://snkrdunk.jp",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=allowed_origins,
+    # Also allow any *.vercel.app deployment so preview/production frontends work
+    # out of the box. Tighten this once a stable custom domain is in place.
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
