@@ -38,6 +38,7 @@ export interface Claim {
   status: string;
   reviewer: string | null;
   review_date: string | null;
+  human_confirmed?: boolean;
   sources?: SourceRef[];
 }
 
@@ -47,6 +48,8 @@ export interface SourceRef {
   url: string | null;
   relation: string;
   published_date: string | null;
+  excerpt?: string | null;
+  checked_on?: string | null;
 }
 
 export interface JourneyStage {

@@ -74,7 +74,8 @@ async function attachSources(claims: Claim[]): Promise<Claim[]> {
   if (!claims.length) return claims;
   const ids = claims.map((c) => c.id);
   const srcs = await q<any>(
-    `select cs.claim_id, s.publisher, s.title, s.url, cs.relation, s.published_date
+    `select cs.claim_id, s.publisher, s.title, s.url, cs.relation, s.published_date,
+            cs.excerpt, cs.checked_on
      from claim_sources cs join sources s on s.id = cs.source_id
      where cs.claim_id = any($1::uuid[])`,
     [ids]
